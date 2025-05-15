@@ -6,8 +6,8 @@ SetSyncRate(60, 0)
 SetClearColor(0, 0, 50)
 
 // 3D Camera
-SetCameraPosition(1, 0.0, 10.0, -10.0)
-SetCameraLookAt(1, 0.0, 0.0, 0.0, 0.0)
+SetCameraPosition(-1, 0.0, 20.0, -15.0) 
+SetCameraLookAt(1, 0.0, 0.0, 20.0, 0.0)
 SetCameraFOV(1, 75.0)
 
 // Player
@@ -37,19 +37,20 @@ global gameOverText
 function InitGame()
     // Player
     player = CreateObjectBox(1, 1, 1)
-    SetObjectPosition(player, 0.0, 0.0, -5.0)
-    SetObjectColor(player, 255, 255, 255, 255)
-    playerSprite = CreateSprite(0) // Invisible sprite for collision
-    SetSpriteSize(playerSprite, 20, 20) // Adjusted for world scale
-    SetSpritePosition(playerSprite, 320, 240) // Center (maps to X=0, Z=-5)
-    SetSpriteVisible(playerSprite, 0) // Hide sprite
+    SetObjectPosition(player, 0.0, 0.0, -5.0) // Above platform
+    SetObjectColor(player, 255, 255, 255, 150) // Slightly more visible
+    playerSprite = CreateDummySprite()
+    SetSpriteSize(playerSprite, 10, 10) // Tight collision
+    SetSpritePosition(playerSprite, 320, 240) // Center (X=0, Z=-5)
+    SetSpriteColor(playerSprite, 255, 0, 0, 255) // Red for debugging
+    SetSpriteVisible(playerSprite, 1) // Visible
     playerSpeed# = 10.0
     playerX# = 0.0
     
-    // Platform
-    platform = CreateObjectBox(20, 0.5, 10)
-    SetObjectPosition(platform, 0.0, -0.75, -5.0)
-    SetObjectColor(platform, 100, 100, 100, 255)
+    // Platform (long road)
+    platform = CreateObjectBox(20, 0.5, 100) // Width matches movement
+    SetObjectPosition(platform, 0.0, -0.75, 45.0) // Z=-5 to Z=95, fixed typo
+    SetObjectColor(platform, 100, 100, 100, 100) // Semi-transparent
     
     // Boxes
     spawnTimer# = 0.0
@@ -57,15 +58,15 @@ function InitGame()
     boxSpeed# = -10.0
     
     // Menu Texts
-    startText = CreateText("Press Space To Start")
+    startText = CreateText("Start")
     SetTextSize(startText, 50)
     SetTextPosition(startText, 320, 200)
     SetTextAlignment(startText, 1)
     
-    // exitText = CreateText("Exit")
-    // SetTextSize(exitText, 50)
-    // SetTextPosition(exitText, 320, 300)
-    // SetTextAlignment(exitText, 1)
+    exitText = CreateText("Exit")
+    SetTextSize(exitText, 50)
+    SetTextPosition(exitText, 320, 300)
+    SetTextAlignment(exitText, 1)
     
     gameOverText = CreateText("Game Over")
     SetTextSize(gameOverText, 50)
@@ -89,8 +90,8 @@ function UpdatePlayer()
         if playerX# > 10.0 then playerX# = 10.0
         SetObjectPosition(player, playerX#, 0.0, -5.0)
         // Map 3D X,Z to 2D sprite X,Y
-        spriteX# = 320.0 + playerX# * 20.0 // Scale X to screen
-        spriteY# = 240.0 // Z=-5 maps to Y=240
+        spriteX# = 320.0 + playerX# * 10.0 // 10 pixels/unit
+        spriteY# = 240.0
         SetSpritePosition(playerSprite, spriteX#, spriteY#)
     endif
 endfunction
@@ -99,16 +100,17 @@ endfunction
 function SpawnBox()
     if boxCount < 100
         boxID = CreateObjectBox(1, 1, 1)
-        SetObjectColor(boxID, Random(100, 255), Random(100, 255), Random(100, 255), 255)
-        x# = Random(-10, 10) * 1.0 
+        SetObjectColor(boxID, Random(100, 255), Random(100, 255), Random(100, 255), 100) // Semi-transparent
+        x# = Random(-10, 10) * 1.0 // Within platform width
         SetObjectPosition(boxID, x#, 0.0, 50.0)
         // Create corresponding sprite
-        spriteID = CreateSprite(0)
-        SetSpriteSize(spriteID, 20, 20) // Same size as player
-        spriteX# = 320.0 + x# * 20.0
-        spriteY# = 240.0 - (50.0 + 5.0) * 4.0 // Z=50 maps to Y
+        spriteID = CreateDummySprite()
+        SetSpriteSize(spriteID, 10, 10) // Tight collision
+        SetSpriteColor(spriteID, 255, 0, 0, 255) // Red for debugging
+        spriteX# = 320.0 + x# * 10.0 // 10 pixels/unit
+        spriteY# = 240.0 - (50.0 + 5.0) * 4.0 // Z=50
         SetSpritePosition(spriteID, spriteX#, spriteY#)
-        SetSpriteVisible(spriteID, 0)
+        SetSpriteVisible(spriteID, 1) // Visible
         boxes[boxCount] = boxID
         boxSprites[boxCount] = spriteID
         inc boxCount
@@ -126,12 +128,12 @@ function UpdateBoxes()
             z# = z# + boxSpeed# * GetFrameTime()
             SetObjectPosition(boxID, GetObjectX(boxID), 0.0, z#)
             // Update sprite position
-            spriteX# = 320.0 + GetObjectX(boxID) * 20.0
-            spriteY# = 240.0 - (z# + 5.0) * 4.0 // Map Z to Y
+            spriteX# = 320.0 + GetObjectX(boxID) * 10.0 // 10 pixels/unit
+            spriteY# = 240.0 - (z# + 5.0) * 4.0
             SetSpritePosition(spriteID, spriteX#, spriteY#)
             
-            // Collision Detection using sprites
-            if gameState = 1 and GetSpriteInBox(playerSprite, GetSpriteX(spriteID) - 10, GetSpriteY(spriteID) - 10, GetSpriteX(spriteID) + 10, GetSpriteY(spriteID) + 10)
+            // Collision Detection
+            if gameState = 1 and GetSpriteInBox(playerSprite, GetSpriteX(spriteID) - 5, GetSpriteY(spriteID) - 5, GetSpriteX(spriteID) + 5, GetSpriteY(spriteID) + 5)
                 gameState = 2
                 SetTextVisible(gameOverText, 1)
                 SetTextVisible(startText, 0)
